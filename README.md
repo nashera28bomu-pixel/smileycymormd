@@ -59,4 +59,4 @@ Send `.menu` for the full colour-coded menu, or `.menu downloads` (any category)
 * This build runs **only the code in this folder**. The original script downloaded code from another GitHub repo on every start; that has been removed.
 
 ## 📄 License
-MIT. Original work © 2025 Nick Hunter; SMILEY CYMOR MD modifications © 2026 Legendary Smiley Cymor (see `LICENSE`).
+MIT. Original work © SMILEY CYMOR MD 2026 Legendary Smiley Cymor (see `LICENSE`).
