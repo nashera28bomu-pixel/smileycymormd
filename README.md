@@ -104,4 +104,4 @@ Send `.menu` for the full menu, or `.menu games` (any zone) for descriptions. Sw
 * Warn counts and wallets are saved in `database/data/` (on Heroku this resets when the dyno restarts unless you attach storage).
 
 ## 📄 License
-MIT. Original work © 2025 Nick Hunter; SMILEY CYMOR MD modifications © 2026 Legendary Smiley Cymor (see `LICENSE`).
+ © 2026 Legendary Smiley Cymor
