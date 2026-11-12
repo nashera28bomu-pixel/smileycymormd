@@ -1,22 +1,10 @@
-name: Extract ZIP to root
-
-# Upload SMILEY-CYMOR-MD.zip to the root of this repo (or run manually) and this
-# workflow unpacks it into the repo root, deletes the zip and commits the result.
+name: Extract bot zip
 
 on:
-  workflow_dispatch:
-    inputs:
-      zip_file:
-        description: "Zip file in the repo root (leave empty = first .zip found)"
-        required: false
-        default: ""
-      subfolder:
-        description: "Folder inside the zip to place at root: smiley-cymor-md (bot), smiley-cymor-pair (pair site) or . (everything)"
-        required: false
-        default: "smiley-cymor-md"
   push:
-    branches: [main, master]
-    paths: ["*.zip"]
+    paths:
+      - "SMILEY-CYMOR-MD-bot.zip"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -25,52 +13,26 @@ jobs:
   extract:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Extract zip into repo root
-        env:
-          ZIP_INPUT: ${{ github.event.inputs.zip_file }}
-          SUB_INPUT: ${{ github.event.inputs.subfolder }}
+      - name: Check the zip exists
         run: |
-          set -euo pipefail
+          test -f SMILEY-CYMOR-MD-bot.zip || { echo "SMILEY-CYMOR-MD-bot.zip not found in repo root"; exit 1; }
 
-          # 1. find the zip
-          ZIP="${ZIP_INPUT:-}"
-          if [ -z "$ZIP" ]; then ZIP="$(ls -1 ./*.zip 2>/dev/null | head -n1 || true)"; fi
-          ZIP="${ZIP#./}"
-          [ -n "$ZIP" ] && [ -f "$ZIP" ] || { echo "::error::No zip file found in the repo root."; exit 1; }
-          echo "Using zip: $ZIP"
-
-          # 2. unpack to a temp folder
-          TMP="$(mktemp -d)"
-          unzip -q "$ZIP" -d "$TMP"
-
-          # 3. step into the single top-level folder (SMILEY-CYMOR-MD/) if there is one
-          SRC="$TMP"
-          while [ "$(find "$SRC" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1 ] && [ -d "$(find "$SRC" -mindepth 1 -maxdepth 1)" ]; do
-            SRC="$(find "$SRC" -mindepth 1 -maxdepth 1)"
-          done
-
-          # 4. pick the sub-folder to publish (default: the bot)
-          SUB="${SUB_INPUT:-smiley-cymor-md}"
-          if [ "$SUB" != "." ] && [ -d "$SRC/$SUB" ]; then SRC="$SRC/$SUB"; fi
-          echo "Copying from: $SRC"
-
-          # 5. copy everything (including hidden files like .Env) to the root
-          rsync -a --exclude='.git' --exclude='.github' "$SRC"/ ./
-
-          # 6. remove the zip so it is not re-processed
-          rm -f "$ZIP"
-
-      - name: Commit and push
+      - name: Extract and flatten
         run: |
-          git config user.name  "github-actions[bot]"
+          rm -rf /tmp/bot && mkdir /tmp/bot
+          unzip -q SMILEY-CYMOR-MD-bot.zip -d /tmp/bot
+          # contents of smiley-cymor-md/ go to the repo root (app.json must be at the root for Heroku)
+          cp -a /tmp/bot/smiley-cymor-md/. .
+          [ -f /tmp/bot/GO-LIVE.md ] && cp /tmp/bot/GO-LIVE.md .
+          rm -f SMILEY-CYMOR-MD-bot.zip
+
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          if git diff --cached --quiet; then
-            echo "Nothing to commit."
-          else
-            git commit -m "Extract SMILEY CYMOR MD zip to root [skip ci]"
-            git push
-          fi
+          git diff --cached --quiet && { echo "Nothing to commit"; exit 0; }
+          git commit -m "Extract SMILEY CYMOR MD bot [skip ci]"
+          git push
