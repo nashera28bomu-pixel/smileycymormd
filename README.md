@@ -12,9 +12,9 @@ A multi-device WhatsApp bot — chat, assist, learn and do more.
 
 ### 🚀 Deploy in one click
 
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/nashera28bomu-pixel/SMILEY-CYMOR-MD)
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/cymortechservices/smileycymormd)
 
-**[👉 Deploy on Heroku](https://heroku.com/deploy?template=https://github.com/nashera28bomu-pixel/SMILEY-CYMOR-MD)** — opens Heroku, paste your **SESSION** ID, press **Deploy app**, and your bot goes live.
+**[👉 Deploy on Heroku](https://heroku.com/deploy?template=https://github.com/cymortechservices/smileycymormd)** — opens Heroku, paste your **SESSION** ID, press **Deploy app**, and your bot goes live.
 
 ⚡ Built by CymorTechServices
 
