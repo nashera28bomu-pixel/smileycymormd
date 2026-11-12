@@ -1,4 +1,5 @@
 'use strict';
+const __V = require('../lib/style').voice;
 
 const axios = global.axios || require('axios');
 const fetch = require('node-fetch');
@@ -357,7 +358,7 @@ module.exports = [
           imageBuffers.map((buffer, i) =>
             client.sendMessage(m.chat, {
               image: buffer,
-              caption: i === 0 ? `🖼️ *${text}*\n\n🤖DOWNLOADED BY SMILEY CYMOR MD` : '',
+              caption: i === 0 ? `🖼️ *${text}*\n\n${__V.fetched()}` : '',
               groupingKey: albumKey
             }, { quoted: m })
           )

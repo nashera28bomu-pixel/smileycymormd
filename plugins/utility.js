@@ -1,3 +1,4 @@
+const __V = require('../lib/style').voice;
 
 module.exports = [
 
@@ -403,7 +404,7 @@ module.exports = [
         `📣 *Channel:* ${brand.channel}\n` +
         (brand.repo ? `💻 *Source:* https://github.com/${brand.repo}\n` : '') +
         (brand.pairUrl ? `🔗 *Get Session ID:* ${brand.pairUrl}\n` : '') +
-        `\n⚡ _Powered by ${brand.poweredBy}_`;
+        `\n⚡ ${__V.sig('brewed')}`;
       let image;
       try { image = fs.readFileSync(path.join(__dirname, '..', 'media', 'menu.jpg')); } catch {}
       if (image) await client.sendMessage(m.chat, { image, caption }, { quoted: m });
@@ -595,7 +596,7 @@ const theme = "dark";
 
 const imageurl = `https://some-random-api.com/canvas/misc/tweet?displayname=${encodeURIComponent(displayname)}&username=${encodeURIComponent(username)}&avatar=${encodeURIComponent(avatar)}&comment=${encodeURIComponent(text)}&replies=${encodeURIComponent(replies)}&retweets=${encodeURIComponent(retweets)}&theme=${encodeURIComponent(theme)}`;
 
-await client.sendMessage(m.chat, { image: { url: imageurl}, caption: `𝗖𝗼𝗻𝘃𝗲𝗿𝘁𝗲𝗱 𝗯𝘆 𝐒𝐌𝐈𝐋𝐄𝐘 𝐂𝐘𝐌𝐎𝐑 𝐌𝐃 𝗕𝗢𝗧`}, { quoted: m}) 
+await client.sendMessage(m.chat, { image: { url: imageurl}, caption: `${__V.converted()}`}, { quoted: m}) 
 
     }
   },

@@ -4,3 +4,5 @@ session/*
 database/localdb.json
 media/menu-generated.*
 *.log
+
+database/data/

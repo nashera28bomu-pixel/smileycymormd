@@ -1,3 +1,4 @@
+const __V = require('../lib/style').voice;
 module.exports = [
     {
     command: ['hack'],
@@ -464,7 +465,7 @@ Spoofing timestamps    ✓
         `📞 *WhatsApp:* ${b.ownerChat}\n` +
         `📣 *Channel:* ${b.channel}\n` +
         (b.pairUrl ? `🔗 *Pair / Session ID:* ${b.pairUrl}\n` : '') +
-        `\n⚡ _Powered by ${b.poweredBy}_`
+        `\n⚡ ${__V.sig('brewed')}`
       );
     }
   }

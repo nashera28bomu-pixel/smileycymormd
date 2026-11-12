@@ -3,37 +3,43 @@
 const fs = require('fs');
 const path = require('path');
 const brand = require('../brand');
+const S = require('../lib/style');
+const { sendWithChannelButton } = require('../lib/channel');
 
-// ─── Fancy text helpers ──────────────────────────────────────────────────────
-const mapChars = (str, up, low, dig) => [...str].map(c => {
-  const code = c.charCodeAt(0);
-  if (code >= 65 && code <= 90) return String.fromCodePoint(up + code - 65);
-  if (code >= 97 && code <= 122) return String.fromCodePoint(low + code - 97);
-  if (dig && code >= 48 && code <= 57) return String.fromCodePoint(dig + code - 48);
-  return c;
-}).join('');
-const bold = s => mapChars(s, 0x1D5D4, 0x1D5EE, 0x1D7EC);       // 𝗕𝗼𝗹𝗱
-const boldItalic = s => mapChars(s, 0x1D63C, 0x1D656, 0);          // 𝘽𝙤𝙡𝙙 𝙄𝙩𝙖𝙡𝙞𝙘
 const cmdName = n => (n || '').toLowerCase();
 
-// ─── Category themes: every category gets its own colour + icon ──────────────
+// ─── Category look & feel (own names, own order — nothing copied from other bots) ───
 const THEMES = {
-  ai:        { icon: '🤖', dot: '🟣', title: 'AI & CHAT' },
-  downloads: { icon: '📥', dot: '🟢', title: 'DOWNLOADS' },
-  media:     { icon: '🎬', dot: '🟠', title: 'MEDIA STUDIO' },
-  converter: { icon: '🔄', dot: '🔵', title: 'CONVERTERS' },
-  coding:    { icon: '💻', dot: '⚫', title: 'CODING' },
-  utility:   { icon: '🛠️', dot: '🟡', title: 'UTILITIES' },
-  owner:     { icon: '👑', dot: '🔴', title: 'OWNER ZONE' },
-  group:     { icon: '👥', dot: '🔵', title: 'GROUP POWER' },
-  effects:   { icon: '✨', dot: '🟣', title: 'EFFECTS' },
-  football:  { icon: '⚽', dot: '🟢', title: 'FOOTBALL' },
-  stalk:     { icon: '🔎', dot: '🟤', title: 'SEARCH & STALK' },
-  others:    { icon: '🎲', dot: '🟠', title: 'FUN & MORE' },
-  misc:      { icon: '📦', dot: '⚪', title: 'MISC' },
+  ai:        { icon: '🧠', rune: '◈', title: 'Brain Lab' },
+  others:    { icon: '🎉', rune: '✧', title: 'Fun Corner' },
+  games:     { icon: '🎮', rune: '✪', title: 'Game Arena' },
+  economy:   { icon: '💰', rune: '❖', title: 'Cymor Bank' },
+  downloads: { icon: '📥', rune: '⬢', title: 'Grab Zone' },
+  media:     { icon: '🎬', rune: '◉', title: 'Media Studio' },
+  effects:   { icon: '🪄', rune: '✺', title: 'Logo Magic' },
+  converter: { icon: '🔁', rune: '⇄', title: 'Shape Shifter' },
+  text:      { icon: '🔤', rune: '✎', title: 'Text Forge' },
+  utility:   { icon: '🧰', rune: '⚙', title: 'Toolbox' },
+  group:     { icon: '🏘️', rune: '✦', title: 'Squad Control' },
+  stalk:     { icon: '🕵️', rune: '◎', title: 'Profile Radar' },
+  football:  { icon: '⚽', rune: '⬡', title: 'Pitch Side' },
+  coding:    { icon: '👨‍💻', rune: '⌘', title: 'Dev Den' },
+  owner:     { icon: '👑', rune: '♛', title: 'Boss Mode' },
+  misc:      { icon: '📦', rune: '▣', title: 'Extras' },
 };
-const ORDER = ['ai', 'downloads', 'media', 'converter', 'effects', 'utility', 'group', 'football', 'stalk', 'coding', 'others', 'owner', 'misc'];
-const theme = c => THEMES[c] || { icon: '📌', dot: '⚪', title: c.toUpperCase() };
+const ORDER = ['ai', 'others', 'games', 'economy', 'downloads', 'media', 'effects', 'converter', 'text', 'utility', 'group', 'stalk', 'football', 'coding', 'owner', 'misc'];
+const theme = c => THEMES[c] || { icon: '📌', rune: '✦', title: c.charAt(0).toUpperCase() + c.slice(1) };
+
+// handpicked "start here" commands that float to the top of a category
+const FEATURED = {
+  ai: ['ai', 'gpt', 'gemini', 'imagine', 'vision'],
+  downloads: ['play', 'ytmp4', 'tiktok', 'instagram', 'facebook', 'spotify'],
+  group: ['tagall', 'hidetag', 'kick', 'promote', 'warn', 'antilink'],
+  utility: ['ping', 'alive', 'weather', 'translate', 'qr'],
+  owner: ['mode', 'prefix', 'settings', 'broadcast'],
+  games: ['tictactoe', 'trivia', 'hangman', 'slot'],
+  economy: ['daily', 'wallet', 'work'],
+};
 
 // ─── Data helpers ────────────────────────────────────────────────────────────
 function collectCommands() {
@@ -43,6 +49,7 @@ function collectCommands() {
     try {
       const list = require(path.join(__dirname, file));
       for (const plugin of (Array.isArray(list) ? list : [list])) {
+        if (plugin.hidden) continue;
         const cat = plugin.category || 'misc';
         const cmds = Array.isArray(plugin.command) ? plugin.command : [plugin.command];
         if (!cmds[0]) continue;
@@ -54,21 +61,30 @@ function collectCommands() {
       }
     } catch {}
   }
-  for (const k of Object.keys(byCategory)) byCategory[k].sort((a, b) => a.name.localeCompare(b.name));
+  for (const k of Object.keys(byCategory)) {
+    const feat = FEATURED[k] || [];
+    // featured first (in the order above), the rest by length then A–Z → a tidy "staircase"
+    byCategory[k].sort((a, b) => {
+      const fa = feat.indexOf(a.name), fb = feat.indexOf(b.name);
+      if (fa !== -1 || fb !== -1) return (fa === -1 ? 99 : fa) - (fb === -1 ? 99 : fb);
+      return a.name.length - b.name.length || a.name.localeCompare(b.name);
+    });
+  }
   return byCategory;
 }
 
-const sortedCats = by => [...Object.keys(by)].sort((a, b) => {
+const sortedCats = by => [...Object.keys(by)].filter(c => c !== 'menu').sort((a, b) => {
   const ia = ORDER.indexOf(a), ib = ORDER.indexOf(b);
   return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
 });
 
 function nairobi() {
   const now = new Date();
-  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Africa/Nairobi' }).format(now)) % 24;
-  const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Africa/Nairobi' }).format(now);
-  const date = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Africa/Nairobi' }).format(now);
-  const greet = hour < 5 ? '🌙 Good night' : hour < 12 ? '🌅 Good morning' : hour < 17 ? '☀️ Good afternoon' : hour < 21 ? '🌇 Good evening' : '🌙 Good night';
+  const tz = 'Africa/Nairobi';
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: tz }).format(now)) % 24;
+  const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).format(now);
+  const date = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: tz }).format(now);
+  const greet = hour < 5 ? '🌙 Late night' : hour < 12 ? '🌅 Good morning' : hour < 17 ? '☀️ Good afternoon' : hour < 21 ? '🌇 Good evening' : '🌙 Good night';
   return { time, date, greet };
 }
 
@@ -78,137 +94,113 @@ function uptimeStr(sec) {
   return `${d ? d + 'd ' : ''}${h}h ${m}m ${s}s`;
 }
 
-// ─── Layout builders ─────────────────────────────────────────────────────────
+// wrap a list of "chips" into lines of at most `width` visible characters
+function wrapChips(chips, width = 30, sep = '  ') {
+  const lines = []; let cur = '';
+  for (const c of chips) {
+    if (!cur) cur = c;
+    else if ((cur + sep + c).length <= width) cur += sep + c;
+    else { lines.push(cur); cur = c; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
 function headerCard({ pushname, mode, prefix, total, cats, Rspeed }) {
   const t = nairobi();
   const mem = (process.memoryUsage().rss / 1048576).toFixed(0);
+  const row = (k, v) => `┃ ${S.small(k.padEnd(8, ' '))}❯ ${v}`;
   return [
-    `╔═══════════════════════╗`,
-    `   😄 ${bold('SMILEY CYMOR MD')} 😄`,
-    `   💫 ${boldItalic(brand.motto)} 💫`,
-    `╚═══════════════════════╝`,
+    `┏━━━━━━━━━━━━━━━━━━━━━━━━┓`,
+    `┃   ${S.script('Smiley Cymor MD')}  ${'✦'}`,
+    `┃   ${S.small(brand.motto)}`,
+    `┗━━━━━━━━━━━━━━━━━━━━━━━━┛`,
     ``,
-    `${t.greet}, *${pushname}*! 👋`,
+    `${t.greet}, *${pushname}* 👋`,
     ``,
-    `┏━━━━━〔 🔮 ${bold('BOT CARD')} 〕━━━━━┓`,
-    `┃ 👑 ${bold('Owner')}    ➜ ${brand.owner}`,
-    `┃ 🛡️ ${bold('Mode')}     ➜ ${String(mode).toUpperCase()}`,
-    `┃ 🎯 ${bold('Prefix')}   ➜ [ ${prefix} ]`,
-    `┃ 🧩 ${bold('Commands')} ➜ ${total}  •  ${cats} categories`,
-    `┃ ⏱️ ${bold('Uptime')}   ➜ ${uptimeStr(process.uptime())}`,
-    `┃ 💾 ${bold('RAM')}      ➜ ${mem} MB`,
-    `┃ ⚡ ${bold('Speed')}    ➜ ${Number(Rspeed || 0).toFixed(3)} ms`,
-    `┃ 🕒 ${bold('Time')}     ➜ ${t.time} • ${t.date}`,
-    `┗━━━━━━━━━━━━━━━━━━━━━━┛`,
+    `╭──── ${S.bold('SYSTEM CARD')} ────╮`,
+    row('owner', brand.owner),
+    row('mode', String(mode).toUpperCase()),
+    row('prefix', `[ ${prefix} ]`),
+    row('tools', `${total} cmds · ${cats} zones`),
+    row('uptime', uptimeStr(process.uptime())),
+    row('memory', `${mem} MB`),
+    row('speed', `${Number(Rspeed || 0).toFixed(2)} ms`),
+    row('clock', `${t.time} · ${t.date}`),
+    `╰──────────────────────╯`,
   ].join('\n');
 }
 
 function fullMenu(by, ctx) {
-  const cats = sortedCats(by);
   let out = '';
-  for (const cat of cats) {
+  for (const cat of sortedCats(by)) {
     const th = theme(cat);
     const list = by[cat];
-    out += `\n╭─────〔 ${th.icon} ${bold(th.title)} 〕─────╮\n`;
-    out += `│ ${th.dot} ${boldItalic(list.length + (list.length === 1 ? ' command' : ' commands'))}\n`;
-    out += `├──────────────────\n`;
-    for (const c of list) out += `│ ${th.dot} ${ctx.prefix}${c.name}\n`;
-    out += `╰──────────────────╯\n`;
+    out += `\n╭━━❰ ${th.icon} ${S.scriptLite(th.title)} ❱━━╮\n`;
+    out += `┃ ${th.rune} ${S.tiny(list.length + ' commands')}\n`;
+    for (const line of wrapChips(list.map(c => `${ctx.prefix}${c.name}`), 32, ' ▪ ')) out += `┃ ${line}\n`;
+    out += `╰━━━━━━━━━━━━━━━━━━━╯\n`;
   }
-  out += `\n💡 ${bold('Tip')}: ${ctx.prefix}menu <category> shows descriptions\n`;
-  out += `   e.g. ${ctx.prefix}menu downloads\n\n`;
-  out += `📣 ${bold(brand.channelName)}\n${brand.channel}\n\n`;
-  out += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-  out += `😄 ${bold('SMILEY CYMOR MD')} • ${boldItalic(brand.motto)}\n`;
-  out += `⚡ ${boldItalic('Powered by ' + brand.poweredBy)}\n`;
-  out += `━━━━━━━━━━━━━━━━━━━━━━`;
+  out += `\n💡 ${S.italic('Peek inside a zone')}: ${ctx.prefix}menu games\n`;
   return out;
 }
 
 function categoryMenu(cat, list, ctx) {
   const th = theme(cat);
-  let out = `╭─────〔 ${th.icon} ${bold(th.title)} 〕─────╮\n`;
-  out += `│ ${th.dot} ${boldItalic(list.length + (list.length === 1 ? ' command' : ' commands'))}\n╰──────────────────╯\n\n`;
+  let out = `╭━━❰ ${th.icon} ${S.scriptLite(th.title)} ❱━━╮\n┃ ${th.rune} ${S.tiny(list.length + ' commands')}\n╰━━━━━━━━━━━━━━━━━━━╯\n\n`;
   for (const c of list) {
-    out += `${th.dot} *${ctx.prefix}${c.name}*\n`;
-    if (c.description) out += `   ↳ _${c.description}_\n`;
-    if (c.aliases.length) out += `   ↳ also: ${c.aliases.slice(0, 4).map(a => ctx.prefix + a).join(', ')}\n`;
+    out += `${th.rune} *${ctx.prefix}${c.name}*\n`;
+    if (c.description) out += `   ╰ ${S.italic(c.description)}\n`;
+    if (c.aliases.length) out += `   ╰ ${S.small('also')}: ${c.aliases.slice(0, 4).map(a => ctx.prefix + a).join(', ')}\n`;
   }
-  out += `\n😄 ${bold('SMILEY CYMOR MD')} • ${boldItalic(brand.motto)}`;
   return out;
 }
+
+const footerText = () => `${S.small(brand.name)} • ${S.italic(brand.motto)}`;
 
 // ─── Media ───────────────────────────────────────────────────────────────────
 const MEDIA_DIR = path.join(__dirname, '..', 'media');
 function readMedia(video) {
   try { return fs.readFileSync(path.join(MEDIA_DIR, video ? 'menu.mp4' : 'menu.jpg')); } catch { return null; }
 }
-const thumb = () => { try { return fs.readFileSync(path.join(MEDIA_DIR, 'logo-small.jpg')); } catch { return undefined; } };
 
 module.exports = [
   {
     command: ['menu', 'help'],
     aliases: ['allmenu', 'commands'],
-    description: 'Show the colourful command menu',
+    description: 'Open the command menu (banner + menu + channel button in one message)',
     category: 'menu',
     handler: async (client, m, { prefix, mode, menutype, pushname, Rspeed, text }) => {
       const by = collectCommands();
       const cats = sortedCats(by);
-      const total = Object.values(by).reduce((s, a) => s + a.length, 0);
+      const total = cats.reduce((s, c) => s + by[c].length, 0);
       const ctx = { prefix, mode, pushname, Rspeed, total, cats: cats.length };
-      const quoted = { quoted: m };
 
-      // ── .menu <category> ──
       const want = (text || '').trim().toLowerCase();
+      let caption;
       if (want) {
         const hit = cats.find(c => c === want || theme(c).title.toLowerCase().includes(want));
         if (!hit) {
-          const names = cats.map(c => `${theme(c).dot} ${c}`).join('\n');
-          return client.sendMessage(m.chat, { text: `❌ No category called *${want}*.\n\n${bold('Categories')}:\n${names}\n\nTry: ${prefix}menu downloads` }, quoted);
+          const names = cats.map(c => `${theme(c).icon} ${c} — ${theme(c).title}`).join('\n');
+          return client.sendMessage(m.chat, { text: `${S.voice.err('no zone called *' + want + '*')}\n\n${S.bold('Zones')}:\n${names}\n\n${S.italic('Try')}: ${prefix}menu games` }, { quoted: m });
         }
-        return client.sendMessage(m.chat, { text: categoryMenu(hit, by[hit], ctx) }, quoted);
+        caption = categoryMenu(hit, by[hit], ctx);
+      } else {
+        caption = headerCard(ctx) + '\n' + fullMenu(by, ctx);
       }
 
-      const head = headerCard(ctx);
-      const body = fullMenu(by, ctx);
-      const sendText = (t = head + '\n' + body) => client.sendMessage(m.chat, { text: t }, quoted);
+      const isVideo = menutype === 'video';
+      const wantsMedia = menutype === 'video' || menutype === 'image';
+      const buffer = wantsMedia ? readMedia(isVideo) : null;
+      const content = { caption, footer: footerText() };
+      if (buffer) { if (isVideo) { content.video = buffer; content.gif = true; } else content.image = buffer; }
 
       try {
-        if (menutype === 'video' || menutype === 'image') {
-          const isVideo = menutype === 'video';
-          const buffer = readMedia(isVideo);
-          if (!buffer) return await sendText();
-          const content = isVideo
-            ? { video: buffer, mimetype: 'video/mp4', caption: head, gifPlayback: true }
-            : { image: buffer, caption: head };
-          try {
-            await client.sendMessage(m.chat, content, quoted);
-            await client.sendMessage(m.chat, { text: body }, quoted);
-          } catch (e) {
-            console.error('[menu] media send failed:', e.message);
-            await sendText();
-          }
-        } else if (menutype === 'link') {
-          await client.sendMessage(m.chat, {
-            text: head + '\n' + body,
-            contextInfo: {
-              externalAdReply: {
-                showAdAttribution: false,
-                title: brand.name,
-                body: brand.motto,
-                thumbnail: thumb(),
-                sourceUrl: brand.channel,
-                mediaType: 1,
-                renderLargerThumbnail: true,
-              },
-            },
-          }, quoted);
-        } else {
-          await sendText();
-        }
+        await sendWithChannelButton(client, m.chat, content, m);
       } catch (err) {
         console.error('[menu] send failed:', err);
-        try { await sendText(); } catch (e) { console.error('[menu] text fallback failed:', e); }
+        try { await client.sendMessage(m.chat, { text: caption + '\n\n📢 ' + brand.channel }, { quoted: m }); } catch (e) { console.error('[menu] text fallback failed:', e); }
       }
     },
   },

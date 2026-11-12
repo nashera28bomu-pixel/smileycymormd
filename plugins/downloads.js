@@ -1,4 +1,5 @@
 'use strict';
+const __V = require('../lib/style').voice;
 
 const axios = global.axios || require('axios');
 const fetch = require('node-fetch');
@@ -535,7 +536,7 @@ module.exports = [
         const fileName = finalTitle.replace(/[\/\\:*?"<>|]/g, '').trim() + '.' + song.ext;
 
         await client.sendMessage(m.chat, { audio: song.buffer, mimetype: song.mimetype, fileName }, { quoted: m });
-        await client.sendMessage(m.chat, { document: song.buffer, mimetype: song.mimetype, caption: '*DOWNLOADED BY 𝐒𝐌𝐈𝐋𝐄𝐘 𝐂𝐘𝐌𝐎𝐑 𝐌𝐃*', fileName }, { quoted: m });
+        await client.sendMessage(m.chat, { document: song.buffer, mimetype: song.mimetype, caption: __V.saved(), fileName }, { quoted: m });
         await client.sendMessage(m.chat, { text: `✅ Succesfully Downloaded! *${finalTitle}*`, edit: msg.key });
       } catch (err) {
         m.reply('❌ An error occurred. Try again.');
@@ -585,7 +586,7 @@ module.exports = [
         const fileName = finalTitle.replace(/[\/\\:*?"<>|]/g, '').trim() + '.mp4';
 
         await client.sendMessage(m.chat, { video: found.buffer, mimetype: 'video/mp4', fileName, caption: `🎬 *${finalTitle}*` }, { quoted: m });
-        await client.sendMessage(m.chat, { document: found.buffer, mimetype: 'video/mp4', caption: '*DOWNLOADED BY 𝐒𝐌𝐈𝐋𝐄𝐘 𝐂𝐘𝐌𝐎𝐑 𝐌𝐃*', fileName }, { quoted: m });
+        await client.sendMessage(m.chat, { document: found.buffer, mimetype: 'video/mp4', caption: __V.saved(), fileName }, { quoted: m });
         await client.sendMessage(m.chat, { text: `✅ Successfully downloaded! *${finalTitle}*`, edit: msg.key });
       } catch (err) {
         console.error('[ytv] failed:', err.message);
@@ -783,7 +784,7 @@ module.exports = [
         return m.reply('❌ Failed to fetch Instagram media. Make sure the post is public and the link is correct, then try again in a minute.' + (why ? `\n\n🔎 Sources tried:\n${why}` : ''));
       }
 
-      const caption = '📸 *Instagram*\n_Downloaded by SMILEY CYMOR MD_';
+      const caption = `📸 *Instagram*\n${__V.fetched()}`;
       for (const { url, isVideo } of items.slice(0, 10)) {
         const content = (src) => isVideo
           ? { video: src, mimetype: 'video/mp4', caption, gifPlayback: false }
@@ -820,7 +821,7 @@ module.exports = [
           await client.sendMessage(m.chat, {
             video: { url: videoData[i].url },
             mimetype: 'video/mp4',
-            caption: `DOWNLOADED BY ${global.botname || 'SMILEY CYMOR MD'}`
+            caption: __V.fetched()
           }, { quoted: m });
         }
       } catch (error) {
@@ -873,13 +874,13 @@ module.exports = [
           album.push({
             video: { url },
             mimetype: 'video/mp4',
-            caption: i === 0 ? `📸 *@${username}* stories\n_Downloaded by SMILEY CYMOR MD_` : undefined,
+            caption: i === 0 ? `📸 *@${username}* stories\n${__V.fetched()}` : undefined,
             gifPlayback: false,
           });
         } else {
           album.push({
             image: { url },
-            caption: i === 0 ? `📸 *@${username}* stories\n_Downloaded by SMILEY CYMOR MD_` : undefined,
+            caption: i === 0 ? `📸 *@${username}* stories\n${__V.fetched()}` : undefined,
           });
         }
       }
@@ -908,7 +909,7 @@ module.exports = [
           return reply('❌ Failed to retrieve the video. The link may be private/removed, or all download servers are busy. Try again shortly.');
         }
 
-        const caption = `🎵 *TikTok*${data.title ? `\n${data.title}` : ''}\n_Downloaded by SMILEY CYMOR MD_`;
+        const caption = `🎵 *TikTok*${data.title ? `\n${data.title}` : ''}\n${__V.fetched()}`;
 
         if (data.videoUrl) {
           try {
@@ -1054,7 +1055,7 @@ module.exports = [
       await client.sendMessage(m.chat, {
         video: { url: videoUrl },
         mimetype: 'video/mp4',
-        caption: `📘 *${title}*\n_Downloaded by SMILEY CYMOR MD_`,
+        caption: `📘 *${title}*\n${__V.fetched()}`,
         gifPlayback: false,
       }, { quoted: m });
 

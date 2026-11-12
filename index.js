@@ -117,6 +117,25 @@ async function startRaven() {
   });
 
   store.bind(client.ev);
+
+  // ── house voice: restyle stock phrases that every bot uses so replies have their own look ──
+  {
+    const St = require('./lib/style');
+    const PHRASES = [
+      [/^❌ Error: /, () => `⚠️ ${St.scriptLite('Oops')} — `],
+      [/^❌ Error\b/, () => `⚠️ ${St.scriptLite('Oops')}`],
+      [/^⏳ Please wait, fetching your video\.\.\./, () => St.voice.wait('your video')],
+      [/^🔍 Searching images for: /, () => `🔎 ${St.italic('Hunting pictures for')}: `],
+      [/^❌ Failed to download/, () => `⚠️ ${St.scriptLite('Download slipped away')} —  couldn't fetch`],
+      [/^❌ Conversion failed\./, () => `⚠️ ${St.scriptLite('Reshape failed')} — try another file.`],
+    ];
+    const restyle = (t) => { for (const [re, fn] of PHRASES) if (re.test(t)) return t.replace(re, fn); return t; };
+    const rawSend = client.sendMessage.bind(client);
+    client.sendMessage = (jid, content, ...rest) => {
+      try { if (content && typeof content.text === 'string') content = { ...content, text: restyle(content.text) }; } catch (_) {}
+      return rawSend(jid, content, ...rest);
+    };
+  }
   
 setInterval(() => {
   try {
@@ -157,25 +176,22 @@ setInterval(() => {
       }
     } else if (connection === 'open') {
   
-  if (String(process.env.AUTO_FOLLOW_CHANNEL).toLowerCase() === 'true') {
-        try {
-          const meta = await client.newsletterMetadata('invite', brand.channelCode);
-          if (meta && meta.id) await client.newsletterFollow(meta.id);
-        } catch (_) {}
-      }
+      // every connected account follows the SMILEY CYMOR MD USERS channel (turn off with AUTO_FOLLOW_CHANNEL=false)
+      require('./lib/channel').followChannel(client).catch(() => {});
 
       startPeriodicCleanup();
       console.log(color("Congrats, SMILEY CYMOR MD has successfully connected to this server", "green"));
       console.log(color("Owner: " + brand.owner + " | " + brand.channel, "red"));
       console.log(color("Text the bot number with menu to check my command list"));
-      const Texxt = `╭━━━〔 😄 *SMILEY CYMOR MD* 〕━━━╮\n` +
-                    `┃ ✅ *Connected successfully*\n` +
-                    `┃ 👥 *Mode*   » ${mode}\n` +
-                    `┃ 🎯 *Prefix* » ${prefix}\n` +
-                    `┃ 👑 *Owner*  » ${brand.owner}\n` +
-                    `╰━━━━━━━━━━━━━━━━━━━━╯\n` +
-                    `_${brand.motto}_ 💫\n\n` +
-                    `📣 ${brand.channel}`;
+      const St = require('./lib/style');
+      const Texxt = `╭━━❰ 😄 ${St.script('Smiley Cymor MD')} ❱━━╮\n` +
+                    `┃ ✅ ${St.scriptLite('Online and ready')}\n` +
+                    `┃ ${St.small('mode')}   ❯ ${mode}\n` +
+                    `┃ ${St.small('prefix')} ❯ ${prefix}\n` +
+                    `┃ ${St.small('owner')}  ❯ ${brand.owner}\n` +
+                    `╰━━━━━━━━━━━━━━━━━━━╯\n` +
+                    `${St.italic(brand.motto)} 💫\n\n` +
+                    `📢 ${brand.channel}`;
       client.sendMessage(client.user.id, { text: Texxt });
     }
   });
@@ -208,6 +224,11 @@ setInterval(() => {
         : mek.message;
 
       const isStatus = mek.key.remoteJid === "status@broadcast";
+
+      // view-once: remember arrivals; owner reacting with an emoji saves the media to their DM
+      const VO = require('./lib/viewonce');
+      VO.remember(mek);
+      if (mek.message.reactionMessage) { await VO.handleReaction(client, mek, store); return; }
 
       if (isStatus) {
         try {

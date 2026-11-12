@@ -1,4 +1,5 @@
 'use strict';
+const __V = require('../lib/style').voice;
 
 const fs   = require('fs');
 const os   = require('os');
@@ -287,7 +288,7 @@ module.exports = [
         try { fs.unlinkSync(media); } catch {}
         if (err) return m.reply("❌ Conversion failed.");
         const buffer = fs.readFileSync(hikari);
-        client.sendMessage(m.chat, { image: buffer, caption: `𝗖𝗼𝗻𝘃𝗲𝗿𝘁𝗲𝗱 𝗯𝘆 𝐒𝐌𝐈𝐋𝐄𝐘 𝐂𝐘𝐌𝐎𝐑 𝐌𝐃` }, { quoted: m });
+        client.sendMessage(m.chat, { image: buffer, caption: `${__V.converted()}` }, { quoted: m });
         try { fs.unlinkSync(hikari); } catch {}
       });
     }
@@ -382,7 +383,7 @@ module.exports = [
         const buffer = await response.buffer();
         await client.sendMessage(m.chat, {
           image: buffer,
-          caption: `𝗖𝗢𝗡𝗩𝗘𝗥𝗧𝗘𝗗 𝗕𝗬 𝐒𝐌𝐈𝐋𝐄𝐘 𝐂𝐘𝐌𝐎𝐑 𝐌𝐃`
+          caption: `${__V.converted()}`
         }, { quoted: m });
       } catch (err) {
         m.reply('❌ Carbon failed: ' + err.message);

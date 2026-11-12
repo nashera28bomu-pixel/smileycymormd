@@ -1,4 +1,5 @@
 'use strict';
+const __V = require('../lib/style').voice;
 
 const mumaker = require('mumaker');
 
@@ -15,7 +16,7 @@ function makeEffect(command, url, label) {
         const result = await mumaker.ephoto(url, text);
         await client.sendMessage(m.chat, {
           image: { url: result.image },
-          caption: `𝔊𝔢𝔫𝔢𝔯𝔞𝔱𝔢𝔡 𝔟𝔶>>>𝐒𝐌𝐈𝐋𝐄𝐘 𝐂𝐘𝐌𝐎𝐑 𝐌𝐃`
+          caption: `${__V.made()}`
         }, { quoted: m });
       } catch (err) {
         m.reply(err.message || 'Failed to generate effect.');

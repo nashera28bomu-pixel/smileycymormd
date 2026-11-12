@@ -1,4 +1,5 @@
 'use strict';
+const __V = require('../lib/style').voice;
 
 const fs = require('fs');
 const Jimp = require('jimp') 
@@ -19,32 +20,7 @@ async function getMediaBuffer(client, node, type) {
   );
 }
 
-// sends whatever view-once media was found (image / video / audio) to `jid`; returns true if something was sent
-async function sendViewOnce(client, m, jid, quotedMessage, label) {
-  const q = unwrapViewOnce(quotedMessage);
-  let sent = false;
-  if (q.imageMessage) {
-    const imageUrl = await client.downloadAndSaveMediaMessage(q.imageMessage);
-    await client.sendMessage(jid, { image: { url: imageUrl }, caption: `${label}\n${q.imageMessage.caption || ''}` }, { quoted: m });
-    sent = true;
-  }
-  if (q.videoMessage) {
-    const videoUrl = await client.downloadAndSaveMediaMessage(q.videoMessage);
-    await client.sendMessage(jid, { video: { url: videoUrl }, caption: `${label}\n${q.videoMessage.caption || ''}` }, { quoted: m });
-    sent = true;
-  }
-  if (q.audioMessage) {
-    const a = q.audioMessage;
-    const buffer = await getMediaBuffer(client, a, 'audioMessage');
-    await client.sendMessage(jid, {
-      audio: buffer,
-      mimetype: a.mimetype || 'audio/ogg; codecs=opus',
-      ptt: !!a.ptt   // keeps voice notes as voice notes
-    }, { quoted: m });
-    sent = true;
-  }
-  return sent;
-}
+const VO = require('../lib/viewonce');
 
 module.exports = [
 {
@@ -503,18 +479,18 @@ module.exports = [
                 
   {
     command: ['vv'],
-    aliases: ['retrieve'],
-    description: 'Retrieve a view-once message (to chat)',
+    aliases: ['retrieve', 'unlock', 'reveal'],
+    description: 'Unlock a view-once message here in the chat',
     category: 'media',
     handler: async (client, m) => {
-      if (!m.quoted) return m.reply('Quote a viewonce message');
+      if (!m.quoted) return m.reply('↩️ Reply to a view-once message with this command.');
       const quotedMessage = m.msg?.contextInfo?.quotedMessage;
       if (!quotedMessage) return m.reply('Could not find the viewonce message.');
       try {
-        const ok = await sendViewOnce(client, m, m.chat, quotedMessage, 'Retrieved by 𝐒𝐌𝐈𝐋𝐄𝐘 𝐂𝐘𝐌𝐎𝐑 𝐌𝐃!');
-        if (!ok) return m.reply('That is not a view-once image, video or voice note.');
+        const ok = await VO.saveQuoted(client, m, m.chat, quotedMessage, m);
+        if (!ok) return m.reply('🫥 That is not a view-once photo, video or voice note.');
       } catch (e) {
-        m.reply('Could not retrieve it: ' + e.message);
+        m.reply('⚠️ Could not unlock it — ' + e.message);
       }
     }
   },
@@ -522,8 +498,8 @@ module.exports = [
   {
     command: ['vv2'],
     aliases: ['mmh', 'uhm'], 
-    noprefix: ['😂', '😍', '🌚', '🌝', '😊', '😉', '🙄', '☑️', '💯', '😅', '🫠', '🙂', '🥰', '😘', '🤩', '😙', '🤢', '🤔', '🫣'],
-    description: 'Retrieve a view-once message (to DM)',
+    noprefix: ['😂', '😍', '🌚', '🌝', '😊', '😉', '🙄', '☑️', '💯', '😅', '🫠', '🙂', '🥰', '😘', '🤩', '😙', '🤢', '🤔', '🫣', '❤️', '❤', '💖', '💗', '💕', '🔥', '👍', '😮', '🤭', '😎', '🙈', '💙', '💚', '💜', '🧡', '💛', '🖤', '🤍', '😻', '✨', '⭐', '👀'],
+    description: 'Save a view-once message to your own DM (reply with a command or an emoji)',
     category: 'media',
     handler: async (client, m, { Owner }) => {
       if (!m.quoted) return;
@@ -531,9 +507,9 @@ module.exports = [
       const quotedMessage = m.msg?.contextInfo?.quotedMessage;
       if (!quotedMessage) return client.sendMessage(client.user.id, { text: 'Could not find the viewonce message.' });
       try {
-        await sendViewOnce(client, m, client.user.id, quotedMessage, 'Retrieved by Smiley Cymor!');
+        await VO.saveQuoted(client, m, client.user.id, quotedMessage);
       } catch (e) {
-        await client.sendMessage(client.user.id, { text: 'Could not retrieve it: ' + e.message });
+        await client.sendMessage(client.user.id, { text: '⚠️ Could not unlock it — ' + e.message });
       }
     }
   },
@@ -594,7 +570,7 @@ module.exports = [
 
       await client.sendMessage(m.chat, {
         image: { url: res.data.result },
-        caption: 'Edited by SMILEY CYMOR MD'
+        caption: __V.edited()
       }, { quoted: m });
 
     } catch (err) {
@@ -670,7 +646,7 @@ module.exports = [
       await client.sendMessage(m.chat, {
         image: buffer,
         mimetype: 'image/png',
-        caption: '✨ *Image Upscaled To HD*\n_Powered by SMILEY CYMOR MD_',
+        caption: `✨ *Upscaled to HD*\n${__V.edited()}`,
       }, { quoted: m });
 
     } catch (err) {

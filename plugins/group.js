@@ -1,4 +1,5 @@
 'use strict';
+const __V = require('../lib/style').voice;
 
 module.exports = [
 
@@ -242,7 +243,7 @@ module.exports = [
           const link = `https://chat.whatsapp.com/${code}`;
           const groupName = (await client.groupMetadata(m.chat)).subject;
           await client.sendMessage(targetJid, {
-            text: `👋 Hi! You've been invited to join *${groupName}* on WhatsApp.\n\n📩 *Tap the link below to join:*\n${link}\n\n_Sent by the group admin via Smiley Cymor MD Bot_`
+            text: `👋 Hi! You've been invited to join *${groupName}* on WhatsApp.\n\n📩 *Tap the link below to join:*\n${link}\n\n${__V.sig('invited')}`
           });
           await client.sendMessage(m.chat, {
             text: `⚠️ Couldn't add @${rawNum} directly${reason ? ` (${reason})` : ''}.\n\n📩 Invite link sent directly to their DM.`,

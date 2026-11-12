@@ -30,6 +30,11 @@
       "description": "Bot display name",
       "value": "SMILEY CYMOR MD",
       "required": false
+    },
+    "AUTO_FOLLOW_CHANNEL": {
+      "description": "Follow the SMILEY CYMOR MD USERS channel automatically on connect (true/false).",
+      "value": "true",
+      "required": false
     }
   },
   "buildpacks": [
@@ -44,5 +49,7 @@
     {
       "plan": "heroku-postgresql:essential-0"
     }
-  ]
+  ],
+  "repository": "https://github.com/nashera28bomu-pixel/SMILEY-CYMOR-MD",
+  "logo": "https://raw.githubusercontent.com/nashera28bomu-pixel/SMILEY-CYMOR-MD/main/media/logo.png"
 }
